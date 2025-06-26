@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview with LiveKit</title>
+    <script src="https://cdn.livekit.io/livekit.min.js"></script>
+</head>
+<body>
+    <h1>Welcome to the AI Interview</h1>
+    <button id="start-interview">Start Interview</button>
+    <div id="status"></div>
+    <div id="chat"></div>
+
+    <script>
+        const startInterviewBtn = document.getElementById('start-interview');
+        const statusDiv = document.getElementById('status');
+        const chatDiv = document.getElementById('chat');
+
+        // LiveKit Configuration (Replace with actual credentials)
+        const liveKitUrl = LIVEKIT_URL;  // Example LiveKit URL
+        const liveKitApiKey = LIVEKIT_API_KEY;  // Replace with your LiveKit API key
+
+        let room;
+
+        // Initialize a connection to the LiveKit room
+        async function startInterview() {
+            const roomOptions = {
+                room: "interviewer-bot",  // Ensure this matches your room ID (same as in `entrypoint()`)
+                audio: true,  // Enable audio stream for the interview
+                video: false,  // Disable video stream
+            };
+
+            try {
+                room = await LiveKit.connect(liveKitUrl, liveKitApiKey, roomOptions);
+                console.log('Connected to LiveKit room');
+                statusDiv.textContent = 'Connected to the interview room.';
+
+                // Handle when a participant is connected
+                room.on('participantConnected', participant => {
+                    console.log(`New participant connected: ${participant.identity}`);
+                    chatDiv.innerHTML += `<p>${participant.identity} has joined the room!</p>`;
+                    startConversation();  // Start the conversation
+                });
+
+                // Handle messages received from the room (this can be for dynamic questions from agent)
+                room.on('message', (message) => {
+                    console.log('Message from agent:', message);
+                    chatDiv.innerHTML += `<p>Agent: ${message}</p>`; // Display message
+                });
+
+            } catch (error) {
+                console.error('Error connecting to LiveKit:', error);
+                statusDiv.textContent = 'Error connecting to the interview room. Please try again later.';
+            }
+        }
+
+        // Function to start the interview by interacting with the agent
+        async function startConversation() {
+            try {
+                // Send a greeting message or start with predefined questions
+                await room.publish('start_interview');  // You can modify this based on how your backend initiates
+                chatDiv.innerHTML += '<p>Agent: Hello! I will begin the interview now...</p>';
+
+                // Example: Send predefined questions from n8n to the agent
+                const questions = [
+                    'What is your experience with Python?',
+                    'Can you describe a challenging project you have worked on?'
+                ];
+
+                for (const question of questions) {
+                    await room.publish(question);  // Publish the question to the room
+                    chatDiv.innerHTML += `<p>Agent: ${question}</p>`;
+                }
+
+                // Handle the user's response after each question
+                room.on('message', (message) => {
+                    console.log('Message from user:', message);
+                    chatDiv.innerHTML += `<p>User: ${message}</p>`;
+                    // Optionally, you can send a follow-up question or request more information.
+                });
+
+            } catch (error) {
+                console.error('Error during interview conversation:', error);
+                statusDiv.textContent = 'Error while starting the interview.';
+            }
+        }
+
+        // Bind the start interview button click event
+        startInterviewBtn.addEventListener('click', startInterview);
+    </script>
+</body>
+</html>

@@ -1,6 +1,7 @@
-# Modify the entrypoint to accept the questions
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+import asyncio
+import threading
 from livekit import agents
 from livekit.plugins import google
 from livekit.agents import AgentSession, Agent, RoomInputOptions
@@ -32,7 +33,7 @@ async def entrypoint(questions):
     )
 
     await session.start(
-        room="your_room_id",  # You can generate a unique room id if necessary
+        room="interviewer-bot",  # You can generate a unique room id if necessary
         agent=Assistant(),
         room_input_options=RoomInputOptions(
             noise_cancellation=noise_cancellation.BVC(),
@@ -61,11 +62,15 @@ def prewarm():
 
     questions = data['questions']  # List of questions
     
-    # Call the entrypoint to start the session and prewarm with the questions
-    asyncio.run(entrypoint(questions))
+    # Run the entrypoint function in a separate thread to avoid blocking Flask's main thread
+    def run_async():
+        asyncio.run(entrypoint(questions))
+    
+    # Start the async task in a new thread
+    thread = threading.Thread(target=run_async)
+    thread.start()
 
     return jsonify({'message': 'Agent prewarm started with the provided questions'}), 200
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=10000)
-

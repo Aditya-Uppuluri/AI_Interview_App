@@ -1,0 +1,24 @@
+from livekit_server_sdk import AccessToken
+
+# Replace with your LiveKit API key and secret
+API_KEY = LIVEKIT_API_KEY
+API_SECRET = LIVEKIT_API_SECRET
+
+# The room and participant identity
+room_id = 'room1'  # The room you want to create or join
+participant_identity = 'indra'  # Unique identifier for the participant
+
+# Create an access token instance with your API key and secret
+token = AccessToken(API_KEY, API_SECRET)
+
+# Add grant for the room and participant
+token.add_grant(
+    room=room_id,  # Grant access to a specific room
+    identity=participant_identity  # Grant access to a specific participant
+)
+
+# Generate the token as a JWT (JSON Web Token)
+generated_token = token.to_jwt()
+
+# Print or return the token
+print(f"Generated Access Token: {generated_token}")
