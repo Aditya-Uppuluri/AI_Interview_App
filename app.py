@@ -1,4 +1,27 @@
 # Modify the entrypoint to accept the questions
+from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+from livekit import agents
+from livekit.plugins import google
+from livekit.agents import AgentSession, Agent, RoomInputOptions
+from livekit.plugins import (
+    openai,
+    cartesia,
+    deepgram,
+    noise_cancellation,
+    silero,
+)
+from livekit.plugins.turn_detector.multilingual import MultilingualModel
+
+load_dotenv()
+
+# Initialize the Flask app
+app = Flask(__name__)
+
+class Assistant(Agent):
+    def __init__(self) -> None:
+        super().__init__(instructions="You are a helpful voice AI assistant.")
+
 async def entrypoint(questions):
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="multi"),
@@ -23,3 +46,22 @@ async def entrypoint(questions):
     # Now that the agent is running, prompt it with the provided questions
     for question in questions:
         await session.generate_reply(instructions=question)
+
+
+@app.route('/prewarm', methods=['POST'])
+def prewarm():
+    """API endpoint to receive questions and prewarm the model"""
+    data = request.json  # Get the questions from the incoming request
+
+    if 'questions' not in data:
+        return jsonify({'error': 'No questions provided'}), 400
+
+    questions = data['questions']  # List of questions
+    
+    # Call the entrypoint to start the session and prewarm with the questions
+    asyncio.run(entrypoint(questions))
+
+    return jsonify({'message': 'Agent prewarm started with the provided questions'}), 200
+
+if __name__ == "__main__":
+    app.run(debug=True)
